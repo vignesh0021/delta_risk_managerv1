@@ -1,7 +1,6 @@
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { useState, useEffect } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { AdjustmentCard } from '../components/AdjustmentCard';
 import { api } from '../services/api';
 import { formatCurrency } from '../utils/formatting';
 

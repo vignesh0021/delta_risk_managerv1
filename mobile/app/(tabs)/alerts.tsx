@@ -1,12 +1,12 @@
-import { View, Text, ScrollView, StyleSheet, useState, useEffect } from 'react-native';
-import { useState as useStateHook, useEffect as useEffectHook } from 'react';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { useState, useEffect } from 'react';
 import { AlertItem } from '../../components/AlertItem';
 import { api } from '../../services/api';
 
 const Alerts = () => {
-  const [alerts, setAlerts] = useStateHook([]);
-  const [loading, setLoading] = useStateHook(true);
-  const [filter, setFilter] = useStateHook('all');
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState('all');
 
   useEffect(() => {
     fetchAlerts();

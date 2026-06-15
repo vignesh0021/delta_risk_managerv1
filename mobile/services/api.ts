@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { storage } from '../utils/storage';
 
-const BASE_URL = 'http://localhost:3001/api';
+const BASE_URL = 'http://localhost:8000/api';
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
@@ -52,7 +52,7 @@ export const api = {
   },
 
   async getAdjustments() {
-    return apiClient.get('/adjustments');
+    return apiClient.get('/adjustments/best');
   },
 
   async sendAdjustmentFeedback(adjustmentId, action) {

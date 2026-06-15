@@ -1,5 +1,5 @@
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, useState } from 'react-native';
-import { useState as useStateHook, useEffect } from 'react';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { useState, useEffect } from 'react';
 import { PositionCard } from '../../components/PositionCard';
 import { GreeksDisplay } from '../../components/GreeksDisplay';
 import { BreakEvenBar } from '../../components/BreakEvenBar';
@@ -7,9 +7,9 @@ import { api } from '../../services/api';
 import { formatCurrency } from '../../utils/formatting';
 
 const Positions = () => {
-  const [positions, setPositions] = useStateHook([]);
-  const [selectedPosition, setSelectedPosition] = useStateHook(null);
-  const [loading, setLoading] = useStateHook(true);
+  const [positions, setPositions] = useState([]);
+  const [selectedPosition, setSelectedPosition] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchPositions();
