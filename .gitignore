@@ -1,0 +1,17 @@
+node_modules/
+.expo/
+dist/
+*.pyc
+__pycache__/
+.pytest_cache/
+.env
+*.db
+*.sqlite3
+build/
+.gradle/
+*.apk
+*.aab
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

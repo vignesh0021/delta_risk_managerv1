@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Delta Risk Manager",
+    "slug": "delta-risk-manager",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "deltarisk",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0D1117"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.deltarisk.manager",
+      "backgroundColor": "#0D1117"
+    },
+    "android": {
+      "package": "com.deltarisk.manager",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0D1117"
+      },
+      "backgroundColor": "#0D1117"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-notifications"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
