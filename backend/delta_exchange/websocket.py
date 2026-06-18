@@ -41,7 +41,7 @@ class DeltaWebSocket:
             hashlib.sha256,
         ).hexdigest()
         return {
-            "type": "auth",
+            "type": "key-auth",
             "payload": {
                 "api-key": self.api_key,
                 "timestamp": timestamp,

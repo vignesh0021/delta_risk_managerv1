@@ -44,6 +44,11 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class ApiKeyLoginRequest(BaseModel):
+    api_key: str
+    api_secret: str
+
+
 class AlertRequest(BaseModel):
     alert_type: str
     message: str
@@ -79,9 +84,11 @@ async def monitor_positions():
                 result = await db.execute(select(User))
                 users = result.scalars().all()
                 for user in users:
-                    if not user.api_key:
+                    if not user.api_key and not settings.DELTA_API_KEY:
                         continue
-                    client = DeltaExchangeClient(user.api_key, user.api_secret)
+                    client = DeltaExchangeClient(
+                        user.api_key or None, user.api_secret or None
+                    )
                     try:
                         positions_data = await client.get_positions()
                         positions = positions_data.get("result", [])
@@ -181,6 +188,46 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
     return {"token": token, "user": {"id": user.id, "email": user.email}}
 
 
+@app.post("/api/auth/api-key-login")
+async def api_key_login(req: ApiKeyLoginRequest, db: AsyncSession = Depends(get_db)):
+    """Login with Delta Exchange API keys directly. Creates a user on first login."""
+    # Validate API keys by making a test request to Delta Exchange
+    client = DeltaExchangeClient(req.api_key, req.api_secret)
+    try:
+        await client.get_account()
+    except DeltaExchangeError as e:
+        raise HTTPException(
+            status_code=401,
+            detail=f"Invalid API keys or broker connection failed: {e.message}"
+        )
+    finally:
+        await client.close()
+
+    # Find or create user based on API key hash
+    email = f"apikey_{req.api_key[:12]}@delta.local"
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+
+    if not user:
+        user = User(
+            email=email,
+            hashed_password=hash_password(req.api_secret),
+            api_key=req.api_key,
+            api_secret=req.api_secret,
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+    else:
+        # Update API keys in case they changed
+        user.api_key = req.api_key
+        user.api_secret = req.api_secret
+        await db.commit()
+
+    token = create_token(user.id)
+    return {"token": token, "user": {"id": user.id, "email": user.email}}
+
+
 @app.get("/api/positions")
 async def get_positions(
     user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -224,10 +271,22 @@ async def get_positions(
 
 @app.get("/api/account")
 async def get_account(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
-    client = DeltaExchangeClient(user.api_key, user.api_secret)
+    client = DeltaExchangeClient(user.api_key or None, user.api_secret or None)
     try:
         data = await client.get_account()
-        result = data.get("result", data) if isinstance(data, dict) else data
+        # Delta /v2/wallet/balances returns {"success": true, "result": [{wallet}, {wallet}, ...]}
+        wallets = data.get("result", []) if isinstance(data, dict) else []
+        if not isinstance(wallets, list):
+            wallets = []
+
+        total_margin_used = 0.0
+        total_available = 0.0
+        for w in wallets:
+            if isinstance(w, dict):
+                total_margin_used += float(w.get("position_margin", 0) or 0)
+                total_margin_used += float(w.get("order_margin", 0) or 0)
+                total_available += float(w.get("available_balance", 0) or 0)
+
         positions_result = await db.execute(
             select(Position).where(Position.user_id == user.id)
         )
@@ -244,8 +303,8 @@ async def get_account(user: User = Depends(get_current_user), db: AsyncSession =
         return {
             "currentPnl": sum(p.unrealized_pnl for p in positions),
             "todayPnl": sum(p.unrealized_pnl for p in positions),
-            "marginUsed": float(result.get("margin_used", 0)) if isinstance(result, dict) else 0,
-            "availableMargin": float(result.get("available_margin", 0)) if isinstance(result, dict) else 0,
+            "marginUsed": total_margin_used,
+            "availableMargin": total_available,
             "spotPrice": spot_price,
             "breakEven": breakeven,
             "netGreeks": net_greeks,
@@ -399,7 +458,7 @@ async def update_api_keys(
 
 @app.get("/api/products")
 async def get_products(user: User = Depends(get_current_user)):
-    client = DeltaExchangeClient(user.api_key, user.api_secret)
+    client = DeltaExchangeClient(user.api_key or None, user.api_secret or None)
     try:
         data = await client.get_products()
         return data

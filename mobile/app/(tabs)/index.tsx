@@ -14,6 +14,8 @@ const Dashboard = () => {
   const [positions, setPositions] = useState([]);
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [connectionError, setConnectionError] = useState('');
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   useEffect(() => {
     fetchData();
@@ -23,6 +25,7 @@ const Dashboard = () => {
 
   const fetchData = async () => {
     try {
+      setConnectionError('');
       const [accountRes, positionsRes, alertsRes] = await Promise.all([
         api.getAccount(),
         api.getPositions(),
@@ -31,8 +34,11 @@ const Dashboard = () => {
       setAccount(accountRes);
       setPositions(positionsRes);
       setAlerts(alertsRes);
+      setLastUpdated(new Date());
     } catch (error) {
+      const errMsg = (error as any)?.response?.data?.detail || (error as any)?.message || 'Failed to fetch data';
       console.error('Fetch error:', error);
+      setConnectionError(errMsg);
     } finally {
       setLoading(false);
     }
@@ -63,6 +69,17 @@ const Dashboard = () => {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.header}>DASHBOARD</Text>
+
+      {connectionError ? (
+        <TouchableOpacity style={styles.errorBanner} onPress={fetchData}>
+          <Text style={styles.errorBannerText}>⚠️ {connectionError}</Text>
+          <Text style={styles.errorBannerSubtext}>Tap to retry</Text>
+        </TouchableOpacity>
+      ) : null}
+
+      {lastUpdated ? (
+        <Text style={styles.lastUpdated}>Last updated: {lastUpdated.toLocaleTimeString()}</Text>
+      ) : null}
 
       <View style={styles.accountSection}>
         <Text style={styles.sectionTitle}>ACCOUNT</Text>
@@ -200,6 +217,10 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 100 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0D1117' },
   loadingText: { color: '#8B949E', fontSize: 18 },
+  errorBanner: { backgroundColor: 'rgba(248,81,73,0.2)', borderWidth: 1, borderColor: '#F85149', borderRadius: 12, padding: 16, marginBottom: 16, alignItems: 'center' },
+  errorBannerText: { color: '#F85149', fontSize: 14, fontWeight: '700', textAlign: 'center' },
+  errorBannerSubtext: { color: '#F85149', fontSize: 12, marginTop: 4, opacity: 0.8 },
+  lastUpdated: { color: '#484F58', fontSize: 11, textAlign: 'right', marginBottom: 8 },
   header: { color: '#FFFFFF', fontSize: 28, fontWeight: '800', marginBottom: 24, letterSpacing: 2 },
   sectionTitle: { color: '#8B949E', fontSize: 13, fontWeight: '700', letterSpacing: 1.5, marginBottom: 12 },
   accountSection: { marginBottom: 24 },

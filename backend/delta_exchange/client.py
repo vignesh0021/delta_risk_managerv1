@@ -41,9 +41,9 @@ class RateLimiter:
 
 
 class DeltaExchangeClient:
-    def __init__(self, api_key: str = "", api_secret: str = ""):
-        self.api_key = api_key or settings.DELTA_API_KEY
-        self.api_secret = api_secret or settings.DELTA_API_SECRET
+    def __init__(self, api_key: str | None = None, api_secret: str | None = None):
+        self.api_key = api_key if api_key is not None else settings.DELTA_API_KEY
+        self.api_secret = api_secret if api_secret is not None else settings.DELTA_API_SECRET
         self.base_url = settings.DELTA_REST_URL
         self.client = httpx.AsyncClient(timeout=30.0)
         self.rate_limiter = RateLimiter()
@@ -72,18 +72,25 @@ class DeltaExchangeClient:
     ) -> Any:
         await self.rate_limiter.acquire()
         import json as json_mod
+        import urllib.parse
 
         body = json_mod.dumps(json_data) if json_data else ""
-        url = f"{self.base_url}{path}"
-        headers = self._headers(method.upper(), path, body)
+
+        # Delta Exchange requires query params in the signature string
+        query_string = ""
+        if params:
+            query_string = "?" + urllib.parse.urlencode(params, doseq=True)
+
+        url = f"{self.base_url}{path}{query_string}"
+        headers = self._headers(method.upper(), path + query_string, body)
 
         try:
             if method.upper() == "GET":
-                resp = await self.client.get(url, headers=headers, params=params)
+                resp = await self.client.get(url, headers=headers)
             elif method.upper() == "POST":
-                resp = await self.client.post(url, headers=headers, json=json_data)
+                resp = await self.client.post(url, headers=headers, content=body.encode() if body else None)
             elif method.upper() == "DELETE":
-                resp = await self.client.delete(url, headers=headers, params=params)
+                resp = await self.client.delete(url, headers=headers)
             else:
                 raise ValueError(f"Unsupported method: {method}")
 

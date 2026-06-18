@@ -1,10 +1,14 @@
 import { View, Text, ScrollView, StyleSheet, TextInput, Switch, TouchableOpacity } from 'react-native';
 import { useState, useEffect } from 'react';
+import { useRouter } from 'expo-router';
 import { storage } from '../../utils/storage';
+import { api } from '../../services/api';
 
 const Settings = () => {
+  const router = useRouter();
   const [apiKey, setApiKey] = useState('');
   const [apiSecret, setApiSecret] = useState('');
+  const [backendUrl, setBackendUrl] = useState('http://localhost:8000');
   const [showSecret, setShowSecret] = useState(false);
   const [websocketEnabled, setWebsocketEnabled] = useState(true);
   const [alertNotifications, setAlertNotifications] = useState(true);
@@ -22,6 +26,7 @@ const Settings = () => {
     if (settings) {
       setApiKey(settings.apiKey || '');
       setApiSecret(settings.apiSecret || '');
+      setBackendUrl(settings.backendUrl || 'http://localhost:8000');
       setWebsocketEnabled(settings.websocketEnabled ?? true);
       setAlertNotifications(settings.alertNotifications ?? true);
       setCriticalAlerts(settings.criticalAlerts ?? true);
@@ -35,11 +40,23 @@ const Settings = () => {
       await storage.saveSettings({
         apiKey,
         apiSecret,
+        backendUrl,
         websocketEnabled,
         alertNotifications,
         criticalAlerts,
         emergencySound,
       });
+
+      // Sync API keys to backend so it can fetch broker data
+      if (apiKey && apiSecret) {
+        try {
+          await api.updateApiKeys(apiKey, apiSecret);
+          console.log('API keys synced to backend');
+        } catch (syncErr) {
+          console.log('API key sync failed (may need login first):', (syncErr as any)?.response?.data?.detail || (syncErr as any).message);
+        }
+      }
+
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (error) {
@@ -87,6 +104,20 @@ const Settings = () => {
               <Text style={styles.toggleSecretText}>{showSecret ? 'HIDE' : 'SHOW'}</Text>
             </TouchableOpacity>
           </View>
+        </View>
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>BACKEND URL</Text>
+          <TextInput
+            style={styles.input}
+            value={backendUrl}
+            onChangeText={setBackendUrl}
+            placeholder="http://192.168.1.100:8000"
+            placeholderTextColor="#484F58"
+            autoCapitalize="none"
+            autoCorrect={false}
+            keyboardType="url"
+          />
+          <Text style={styles.hintText}>Use your machine's IP if backend is on another device</Text>
         </View>
       </View>
 
@@ -160,7 +191,7 @@ const Settings = () => {
         </Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.logoutButton}>
+      <TouchableOpacity style={styles.logoutButton} onPress={async () => { await storage.clearAll(); router.replace('/login'); }}>
         <Text style={styles.logoutButtonText}>LOGOUT</Text>
       </TouchableOpacity>
     </ScrollView>
@@ -180,6 +211,7 @@ const styles = StyleSheet.create({
   secretInput: { flex: 1 },
   toggleSecretButton: { backgroundColor: '#21262D', borderRadius: 8, paddingHorizontal: 16, justifyContent: 'center' },
   toggleSecretText: { color: '#58A6FF', fontSize: 12, fontWeight: '700' },
+  hintText: { color: '#484F58', fontSize: 11, marginTop: 4 },
   settingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#21262D' },
   settingInfo: { flex: 1, marginRight: 16 },
   settingLabel: { color: '#FFFFFF', fontSize: 14, fontWeight: '700', marginBottom: 2 },
