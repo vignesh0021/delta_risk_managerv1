@@ -113,7 +113,10 @@ class DeltaExchangeClient:
         return await self._request("GET", "/v2/wallet/balances")
 
     async def get_positions(self) -> Any:
-        return await self._request("GET", "/v2/positions")
+        # /v2/positions requires a product filter and returns nothing without
+        # one; /v2/positions/margined returns every open position for the
+        # account, which is what the dashboard needs.
+        return await self._request("GET", "/v2/positions/margined")
 
     async def get_orders(self, product_id: int | None = None) -> Any:
         params = {}

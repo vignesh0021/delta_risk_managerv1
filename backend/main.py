@@ -160,6 +160,16 @@ app.add_middleware(
 )
 
 
+@app.get("/")
+async def root():
+    return {"status": "ok", "service": "Delta Exchange Risk Manager"}
+
+
+@app.get("/api/health")
+async def health():
+    return {"status": "healthy"}
+
+
 @app.post("/api/auth/register")
 async def register(req: RegisterRequest, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == req.email))
@@ -484,3 +494,15 @@ async def websocket_endpoint(ws: WebSocket):
     except Exception:
         if ws in connected_clients:
             connected_clients.remove(ws)
+
+
+if __name__ == "__main__":
+    import os
+
+    import uvicorn
+
+    uvicorn.run(
+        "backend.main:app",
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", "8000")),
+    )
