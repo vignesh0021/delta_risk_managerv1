@@ -60,6 +60,38 @@ npx expo start
 
 Scan the QR code with Expo Go on your phone.
 
+## Deploy the backend & connect the app
+
+The mobile app is a frontend — it needs the FastAPI backend running at a URL it
+can reach. The backend holds your Delta keys and calls Delta Exchange; the app
+does **not** talk to Delta directly.
+
+### 1. Deploy the backend
+
+The repo ships a `Dockerfile` and `render.yaml` for one-click deploys:
+
+- **Render:** New > Blueprint > select this repo. It builds the `Dockerfile`,
+  health-checks `/api/health`, and generates a `JWT_SECRET`. Note the public URL
+  (e.g. `https://delta-risk-backend.onrender.com`).
+- **Any Docker host:** `docker build -t delta-backend . && docker run -p 8000:8000 delta-backend`
+- **Locally on your LAN:** from the repo root run `python -m backend.main`
+  (serves on `0.0.0.0:8000`); from the phone use your machine's LAN IP, e.g.
+  `http://192.168.1.50:8000`.
+
+> SQLite on a free host is ephemeral. For durable data, point `DATABASE_URL` at
+> Postgres (`postgresql+asyncpg://…`) and add `asyncpg` to `requirements.txt`.
+
+### 2. Connect from the app
+
+1. Open **Settings** and set **Backend URL** to the address from step 1
+   (`https://…`, or `http://<lan-ip>:8000` for local testing). Save.
+2. On the **Login** screen, paste your Delta Exchange **API Key** and **API
+   Secret** (Read Data + Account permissions; whitelist the backend's outbound
+   IP in Delta if you use IP restrictions) and tap connect.
+
+The keys are validated against Delta on login; the backend then polls positions
+every 10s and the Dashboard/Positions tabs populate.
+
 ## Environment Variables
 
 | Variable | Description |
